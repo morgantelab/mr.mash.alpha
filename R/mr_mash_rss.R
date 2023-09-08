@@ -448,7 +448,15 @@ mr.mash.rss <- function(Bhat, Shat, Z, R, covY, n, S0, w0=rep(1/(length(S0)), le
           V <- diag(diag(V))
 
         #Recompute precomputed quantities after updating V
-        comps <- precompute_quants(n, V, S0, standardize, version)
+        tryCatch({
+          comps <- precompute_quants(n, V, S0, standardize, version)
+          }, error = function(e) {
+            saveRDS(list(mu1=mu1_t, S1=S1_t, w1=w1_t, V=V, w0=w0, 
+                         S0=simplify2array_custom(S0), message=warning(e)), 
+                    "chol_V_issue.rds")
+            stop(e)
+          })
+        
         if(!standardize)
           comps$xtx <- diag(XtX)
         if(compute_ELBO || !standardize)
