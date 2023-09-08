@@ -104,7 +104,8 @@ precompute_quants <- function(n, V, S0, standardize, version){
       }, error = function(e) {
         saveRDS(list(V=V, message=warning(e)), "chol_V_issue.rds")
         stop(e)
-      })
+      }
+    })
     
     S <- V/xtx
     S_chol <- R/sqrt(xtx)
@@ -132,9 +133,10 @@ precompute_quants <- function(n, V, S0, standardize, version){
     ###Quantities that don't depend on S0
     tryCatch({
       R <- chol(V)
-    }, error = function(e) {
-      saveRDS(list(V=V, message=warning(e)), "chol_V_issue.rds")
-      stop(e)
+      }, error = function(e) {
+        saveRDS(list(V=V, message=warning(e)), "chol_V_issue.rds")
+        stop(e)
+      }
     })
     
     #Rtinv <- solve(t(R))
