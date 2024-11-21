@@ -221,6 +221,8 @@ update_weights_squarem <- function(theta0, theta1, theta2){
     stepp <- min(-norm(rr, type="2") / norm(vv, type="2"), -1)
     theta[i] <- theta0[i] - 2 * stepp * rr + stepp * stepp * vv
     
+    theta[is.nan(theta)] <- 0 
+    
     while(theta[i] < 0 || theta[i] > 1){
       stepp <- min(stepp * 0.5, -1)
       
