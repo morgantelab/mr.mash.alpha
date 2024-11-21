@@ -507,7 +507,7 @@ mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL,
     ##Compute difference in mu1 and ELBO between two successive iterations,
     ##and assign the requested criterion to delta_conv
     delta_mu1 <- abs(mu1_t - mu1_old)
-    delta_ELBO <- ELBO - ELBO_old
+    delta_ELBO <- abs(ELBO - ELBO_old)
     if(convergence_criterion=="mu1")
       delta_conv <- max(delta_mu1)
     else if(convergence_criterion=="ELBO")
