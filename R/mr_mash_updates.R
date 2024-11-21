@@ -209,6 +209,31 @@ update_weights_em <- function(x, lambda){
   return(w)
 }
 
+
+###Update mixture weights with SQUAREM
+update_weights_squarem <- function(theta0, theta1, theta2){
+  k <- length(theta2)
+  theta <- vector("numeric", k)
+  
+  for(i in 1:k){
+    rr <- theta1[i] - theta0[i]
+    vv <- (theta2[i] - theta1[i]) - rr
+    stepp <- min(-norm(rr, type="2") / norm(vv, type="2"), -1)
+    theta[i] <- theta0[i] - 2 * stepp * rr + stepp * stepp * vv
+    
+    while(theta[i] < 0 || theta[i] > 1){
+      stepp <- min(stepp * 0.5, -1)
+      
+      theta[i] <- theta0[i] - 2 * stepp * rr + stepp * stepp * vv
+    }
+  }
+  
+  theta <- theta/sum(theta)
+  
+  return(theta)
+}
+
+
 ###Impute/update missing Y
 impute_missing_Y_R <- function(Y, mu, Vinv, miss, non_miss){
   n <- nrow(Y)

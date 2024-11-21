@@ -29,16 +29,16 @@
 #' 
 #' @param update_w0 If \code{TRUE}, prior weights are updated.
 #' 
-#' @param update_w0_method Method to update prior weights. Only EM is
-#'   currently supported.
+#' @param update_w0_method Method to update prior weights. EM and SQUAREM
+#'   are currently supported.
 #'   
 #' @param w0_penalty K-vector of penalty terms (>=1) for each 
 #'  mixture component. Default is all components are unpenalized.
 #' 
 #' @param w0_threshold Drop mixture components with weight less than this value.
 #'   Components are dropped at each iteration after 15 initial iterations.
-#'   This is done to prevent from dropping some poetentially important 
-#'   components prematurely.
+#'   This is done to prevent from dropping some potentially important 
+#'   components prematurely. This is not supported for method SQUAREM.
 #'   
 #' @param update_w0_max_iter Maximum number of iterations for the update
 #'   of w0.
@@ -169,7 +169,7 @@
 #' 
 mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL, 
                     mu1_init=matrix(0, nrow=ncol(X), ncol=ncol(Y)), tol=1e-4, convergence_criterion=c("mu1", "ELBO"),
-                    max_iter=5000, update_w0=TRUE, update_w0_method="EM", w0_penalty=rep(1, length(S0)), 
+                    max_iter=5000, update_w0=TRUE, update_w0_method=c("EM","SQUAREM"), w0_penalty=rep(1, length(S0)), 
                     update_w0_max_iter=Inf, w0_threshold=0, compute_ELBO=TRUE, standardize=TRUE, verbose=TRUE,
                     update_V=FALSE, update_V_method=c("full", "diagonal"), version=c("Rcpp", "R"), e=1e-8,
                     ca_update_order=c("consecutive", "decreasing_logBF", "increasing_logBF", "random"),
@@ -239,6 +239,8 @@ mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL,
     stop("ELBO needs to be computed with convergence_criterion=\"ELBO\".")
   if(ca_update_order!="consecutive" && any(is.na(Y)))
     stop("ca_update_order=\"consecutive\" is the only option when Y has missing values.")
+  if(update_w0_method=="SQUAREM" && w0_threshold>0)
+    stop("update_w0_method==\"SQUAREM\" can only be used with w0_threshold=0.")
 
   ###Obtain dimensions needed from inputs
   p <- ncol(X)
@@ -417,6 +419,14 @@ mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL,
 
     # M-STEP
     # ------
+    ##Save previous estimates of mixture weights for SQUAREM
+    if(update_w0_method=="SQUAREM" && t >= 2){
+      w0_tminus2 <- w0_tminus1
+    }
+    if(update_w0_method=="SQUAREM" && t >= 1){
+      w0_tminus1 <- w0
+    }
+    
     if(t > 1){
       ##Update V if requested
       if(update_V){
@@ -436,7 +446,13 @@ mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL,
       
       ##Update w0 if requested
       if(update_w0 && t <= update_w0_max_iter){
+        
         w0 <- update_weights_em(w1_t, w0_penalty)
+        
+        #SQUAREM
+        if(update_w0_method=="SQUAREM" && t>=3){
+          w0 <- update_weights_squarem(w0_tminus2, w0_tminus1, w0)
+        }
         
         #Drop components with mixture weight <= w0_threshold
         if(t>15 && any(w0 < w0_threshold)){
@@ -456,7 +472,7 @@ mr.mash <- function(X, Y, S0, w0=rep(1/(length(S0)), length(S0)), V=NULL,
           } else { #some other component is the only one left
             stop("Only one component (different from the null) left. Consider lowering w0_threshold.")
           }
-	}
+	      }
       }
     }
     
